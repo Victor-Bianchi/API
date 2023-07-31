@@ -10,6 +10,11 @@
     # - Remover um item da lista via DEL
     # - Alterar dados do item da lista via PUT
 
+    /**
+     * @version 1.0
+     * @author Victor Bianchi
+     */
+
     use App\MySQL;
 
     require_once '../vendor/autoload.php';
@@ -35,12 +40,34 @@
                     echo json_encode(['response'=>'ok']);
                     break;
                 case 'PUT':
-                    # alterar dados no db
-                    echo "PUT";
+                    $json = file_get_contents('php://input');
+                    $data = json_decode($json, true);
+                    $id = $data['id'];
+                    $nome = $data['nome'];
+                    $marca = $data['marca'];
+                    $valor = $data['valor'];
+
+                    $sql = MySQL::connect()->prepare('UPDATE `produtos` SET `nome` = ?, `marca` = ?, `valor` = ? WHERE `id` = ?')->execute([$nome, $marca, $valor, $id]);
+                    if($sql) {
+                        echo json_encode(['response'=>'ok', 'changed'=>$id]);
+                    } else {
+                        echo json_encode(['response'=>'error']);
+                    }
                     break;
                 case 'DELETE':
-                    # excluir dados do db
-                    echo "DEL";
+                    $id = $_GET['id'];
+                    $sql = MySQL::connect()->prepare("SELECT `nome` FROM `produtos` WHERE `id` = $id");
+                    $sql->execute();
+                    $data = $sql->fetchAll(PDO::FETCH_ASSOC);
+                    foreach ($data as $key => $value) {
+                        $sql = MySQL::connect()->prepare("DELETE FROM `produtos` WHERE id = $id");
+                        $info = $sql->execute();
+                        if($info) {
+                            echo json_encode(['response'=>'ok', 'deleted'=> $value['nome']]);
+                        } else {
+                            echo json_encode(['response'=>'error', 'deleted'=> $value['nome']]);
+                        }
+                    }
                     break;
                 default:
                     die('ERRO: operação não suportada, cheque a documentação');
